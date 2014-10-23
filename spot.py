@@ -54,11 +54,12 @@ def normalize(text):
     text, foo, bar = text.partition(' - ')
     text, foo, bar = text.partition(' (')
     # Set to lower case and strip extra spaces on the right
-    norm = text.lower().rstrip().encode('utf-8')
+    norm = text.lower().rstrip().decode('utf-8')
     # Optionally stem using NTLK
     return norm
 
 
+@memorize
 def search_tracks(phrase):
     """ Submit a query to Spotify for a given <phrase>. NOTE: the maximum
     number of results is apparently limited to 50.
@@ -130,7 +131,9 @@ def score_match(phrase, song):
     #  return -len([w for w in phrase.split() if w not in song.split()])
 
 
-def greedy_match(words, songs):
+@memorize
+def greedy_match(phrase, songs=None):
+    words = phrase.split()
     # Greedy search
     best_score = 0
     num_words = 1
@@ -160,7 +163,8 @@ def create_greedy_playlist(msg):
     playlist = []
     i = 0
     while i < len(words):
-        best_score, best_song, num_words = greedy_match(words[i:], songs)
+        _, best_song, num_words = greedy_match(' '.join(words[i:]),
+                                               songs=songs)
         i += num_words
         playlist.append(best_song)
     print 'Playlist: '
@@ -227,7 +231,7 @@ def dp_parse(phrase, songs=None):
 
 
 @timeit  # Playlist creation from a message given a set of songs is quick
-def create_playlist(msg):
+def create_dp_playlist(msg):
     """ Query some songs, then create a playlist using a dynamic programming
     approach. Print out the results.
     """
@@ -254,7 +258,7 @@ def test_msgs():
     msgs = [
         "Hi, how are you doing today? Do you want to get a beer? See you soon!",
         "If I can't let it go out of my mind?",
-        "I would lie to you but never for you."
+        "I would lie to you but never for you.",
         "Man I'm so bored. Let's do something fun. Call me.",
         "Hey babe, somebody told me you're not coming home tonight.",
         "What Katie did sometimes makes me wonder.",
@@ -276,9 +280,10 @@ def main():
     """
     msgs = test_msgs()
     for msg in msgs:
-        create_playlist(msg)
+        # Greedy method has about the same results, but usually much faster,
+        # Compared the dynamic programming method.
         create_greedy_playlist(msg)
-
+        #create_dp_playlist(msg)
 
 if __name__ == '__main__':
     main()
